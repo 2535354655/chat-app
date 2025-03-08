@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой онлайн-чат</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f4f7fa; }
+        .container { margin-top: 20px; max-width: 800px; }
+        .chat-box { height: 400px; overflow-y: auto; background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .message { margin-bottom: 10px; }
+        .message .username { font-weight: bold; color: #1e90ff; }
+        .message .time { font-size: 0.8em; color: #888; }
+        .input-group { margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Онлайн-чат</h1>
+        <div id="auth-section" class="mb-3">
+            <input type="text" id="username" class="form-control mb-2" placeholder="Твоё имя">
+            <button id="login-btn" class="btn btn-primary">Войти</button>
+        </div>
+        <div id="chat-section" style="display: none;">
+            <div id="chat-box" class="chat-box"></div>
+            <div class="input-group">
+                <input type="text" id="message-input" class="form-control" placeholder="Напиши сообщение...">
+                <button id="send-btn" class="btn btn-primary">Отправить</button>
+            </div>
+            <button id="logout-btn" class="btn btn-secondary mt-2">Выйти</button>
+        </div>
+    </div>
+    <script>
+        const supabase = Supabase.createClient(
+            'https://owliacbbnqkycvzdfiin.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93bGlhY2JibnFreWN2emRmaWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNzEyNDIsImV4cCI6MjA1Njg0NzI0Mn0.7BtwqLPKVgbmbvCNzxKX9wzj_rvE6Y9-H1_RF7sDgJU'
+        );
+
+        let currentUser = null;
+
+        async function loadMessages() {
+            const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: true });
+            if (error) { console.error('Ошибка:', error); return; }
+            const chatBox = document.getElementById('chat-box');
+            chatBox.innerHTML = '';
+            data.forEach(msg => addMessage(msg));
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function addMessage(msg) {
+            const chatBox = document.getElementById('chat-box');
+            const div = document.createElement('div');
+            div.className = 'message';
+            const time = new Date(msg.created_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            div.innerHTML = `<span class="username">${msg.username}</span> <span class="time">[${time}]</span>: ${msg.content}`;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const username = document.getElementById('username').value.trim();
+            if (username) {
+                currentUser = { id: 'anon_' + Math.random().toString(36).substr(2, 9), username };
+                document.getElementById('auth-section').style.display = 'none';
+                document.getElementById('chat-section').style.display = 'block';
+                loadMessages();
+            }
+        });
+
+        document.getElementById('send-btn').addEventListener('click', async () => {
+            const content = document.getElementById('message-input').value.trim();
+            if (content && currentUser) {
+                const { error } = await supabase.from('messages').insert({
+                    user_id: currentUser.id,
+                    username: currentUser.username,
+                    content
+                });
+                if (error) console.error('Ошибка:', error);
+                document.getElementById('message-input').value = '';
+            }
+        });
+
+        document.getElementById('message-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') document.getElementById('send-btn').click();
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            currentUser = null;
+            document.getElementById('chat-section').style.display = 'none';
+            document.getElementById('auth-section').style.display = 'block';
+        });
+
+        supabase.channel('public:messages')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+                if (currentUser) addMessage(payload.new);
+            })
+            .subscribe();
+    </script>
+</body>
+</html>
