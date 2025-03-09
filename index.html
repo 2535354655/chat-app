@@ -13,11 +13,8 @@
             margin: 0 auto;
             padding: 20px;
         }
-        #login, #chat {
-            margin-bottom: 20px;
-        }
         #chat {
-            display: none;
+            margin-bottom: 20px;
         }
         #messages {
             border: 1px solid #ccc;
@@ -36,16 +33,8 @@
     </style>
 </head>
 <body>
-    <!-- Экран входа -->
-    <div id="login">
-        <h2>Вход в чат</h2>
-        <input type="text" id="usernameInput" placeholder="Введите ваше имя" />
-        <button onclick="login()">Войти</button>
-    </div>
-
-    <!-- Экран чата -->
     <div id="chat">
-        <h2>Чат</h2>
+        <h2>Чат (имя: Guest)</h2>
         <div id="messages"></div>
         <input type="text" id="messageInput" placeholder="Введите сообщение" />
         <button onclick="sendMessage()">Отправить</button>
@@ -55,27 +44,16 @@
         // Инициализация Supabase
         const { createClient } = Supabase;
         const supabase = createClient(
-            'https://nhukoqmbfgurxzcwcnjc.supabase.co', // Твой Project URL
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWtvcW1iZmd1cnh6Y3djbmpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NDUwNDgsImV4cCI6MjA1NzAyMTA0OH0.TFDyLy_4CfYbooG_uagzbWHS4nW5BmfP7ThuDStuamA' // Твой Anon Key
+            'https://nhukoqmbfgurxzcwcnjc.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWtvcW1iZmd1cnh6Y3djbmpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NDUwNDgsImV4cCI6MjA1NzAyMTA0OH0.TFDyLy_4CfYbooG_uagzbWHS4nW5BmfP7ThuDStuamA'
         );
 
-        let username = '';
-
-        // Функция входа
-        function login() {
-            username = document.getElementById('usernameInput').value.trim();
-            if (username) {
-                document.getElementById('login').style.display = 'none';
-                document.getElementById('chat').style.display = 'block';
-                loadMessages();
-                subscribeToMessages();
-            } else {
-                alert('Пожалуйста, введите имя');
-            }
-        }
+        // Фиксированное имя (можно изменить на своё)
+        const username = 'Guest';
 
         // Загрузка существующих сообщений
         async function loadMessages() {
+            console.log('Загрузка сообщений...');
             const { data, error } = await supabase
                 .from('messages')
                 .select('*')
@@ -86,6 +64,7 @@
                 return;
             }
 
+            console.log('Сообщения загружены:', data);
             const messagesDiv = document.getElementById('messages');
             data.forEach(message => {
                 const messageElement = document.createElement('p');
@@ -95,11 +74,13 @@
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
 
-        // Подписка на новые сообщения в реальном времени
+        // Подписка на новые сообщения
         function subscribeToMessages() {
+            console.log('Подписка на новые сообщения...');
             supabase
                 .channel('public:messages')
                 .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+                    console.log('Новое сообщение получено:', payload.new);
                     const message = payload.new;
                     const messagesDiv = document.getElementById('messages');
                     const messageElement = document.createElement('p');
@@ -107,13 +88,19 @@
                     messagesDiv.appendChild(messageElement);
                     messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 })
-                .subscribe();
+                .subscribe((status) => {
+                    console.log('Статус подписки:', status);
+                });
         }
 
         // Отправка сообщения
         async function sendMessage() {
+            console.log('Отправка сообщения...');
             const content = document.getElementById('messageInput').value.trim();
-            if (!content) return;
+            if (!content) {
+                console.log('Сообщение пустое');
+                return;
+            }
 
             const { error } = await supabase
                 .from('messages')
@@ -124,15 +111,22 @@
                 return;
             }
 
+            console.log('Сообщение отправлено');
             document.getElementById('messageInput').value = '';
         }
 
-        // Отправка сообщения по нажатию Enter
+        // Отправка по Enter
         document.getElementById('messageInput').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 sendMessage();
             }
         });
+
+        // Инициализация при загрузке страницы
+        window.onload = function() {
+            loadMessages();
+            subscribeToMessages();
+        };
     </script>
 </body>
 </html>
