@@ -42,11 +42,17 @@
 
     <script>
         // Инициализация Supabase
-        const { createClient } = Supabase; // Правильный импорт
-        const supabase = createClient(
-            'https://nhukoqmbfgurxzcwcnjc.supabase.co',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWtvcW1iZmd1cnh6Y3djbmpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NDUwNDgsImV4cCI6MjA1NzAyMTA0OH0.TFDyLy_4CfYbooG_uagzbWHS4nW5BmfP7ThuDStuamA'
-        );
+        let supabase;
+        document.addEventListener('DOMContentLoaded', function () {
+            supabase = supabase.createClient(
+                'https://nhukoqmbfgurxzcwcnjc.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5odWtvcW1iZmd1cnh6Y3djbmpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE0NDUwNDgsImV4cCI6MjA1NzAyMTA0OH0.TFDyLy_4CfYbooG_uagzbWHS4nW5BmfP7ThuDStuamA'
+            );
+
+            // Инициализация при загрузке страницы
+            loadMessages();
+            subscribeToMessages();
+        });
 
         // Фиксированное имя
         const username = 'Guest';
@@ -121,12 +127,6 @@
                 sendMessage();
             }
         });
-
-        // Инициализация при загрузке страницы
-        window.onload = function() {
-            loadMessages();
-            subscribeToMessages();
-        };
     </script>
 </body>
 </html>
